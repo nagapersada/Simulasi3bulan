@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Profit DVTEAM/OPALP</title>
+    <style>
+        :root {
+            --primary: #d4af37; /* Warna Emas */
+            --dark: #1a1a1a;
+            --light: #f4f4f4;
+            --card-bg: #2c2c2c;
+            --green: #2ecc71;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        h1 { color: var(--primary); text-transform: uppercase; letter-spacing: 2px; }
+        h3 { color: #ccc; font-weight: normal; }
+
+        .control-panel {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label { margin-bottom: 5px; font-weight: bold; color: var(--primary); }
+        input {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            font-size: 1rem;
+        }
+
+        button {
+            grid-column: 1 / -1;
+            padding: 12px;
+            background-color: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { background-color: #b5952f; }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--primary);
+        }
+        .card h4 { margin: 0 0 5px 0; color: #aaa; }
+        .card p { margin: 0; font-size: 1.4rem; font-weight: bold; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #444;
+        }
+
+        th { background-color: #333; color: var(--primary); }
+        tr:hover { background-color: #3a3a3a; }
+
+        .highlight { color: var(--primary); font-weight: bold; }
+        .bonus-text { color: var(--green); font-size: 0.8em; display: block;}
+        
+        /* Utility */
+        .text-right { text-align: right; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Kalkulator Simulasi</h1>
+            <h3>DVTEAM / OPALP Simulation Tool</h3>
+        </header>
+
+        <div class="control-panel">
+            <div class="input-group">
+                <label>Saldo Awal (USDT)</label>
+                <input type="number" id="startBalance" value="100">
+            </div>
+            <div class="input-group">
+                <label>Profit per Sinyal (%)</label>
+                <input type="number" id="profitPercent" value="0.85" step="0.01">
+            </div>
+            <div class="input-group">
+                <label>Kurs USD ke IDR</label>
+                <input type="number" id="kursIdr" value="15500">
+            </div>
+            <button onclick="calculateSimulation()">HITUNG SIMULASI</button>
+        </div>
+
+        <div class="summary-cards">
+            <div class="card">
+                <h4>Total Saldo Akhir (USDT)</h4>
+                <p id="totalUSDT">0.00 USDT</p>
+            </div>
+            <div class="card">
+                <h4>Estimasi Rupiah</h4>
+                <p id="totalIDR">Rp 0</p>
+            </div>
+            <div class="card">
+                <h4>Total Hari</h4>
+                <p>30 Hari</p>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th>Hari</th>
+                        <th>Aktivitas</th>
+                        <th>Jml Sinyal</th>
+                        <th>Profit Trading</th>
+                        <th>Bonus / Topup</th>
+                        <th>Saldo Akhir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function formatMoney(amount, currency = "USDT") {
+            if (currency === "IDR") {
+                return "Rp " + amount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
+            return parseFloat(amount).toFixed(2);
+        }
+
+        function calculateSimulation() {
+            let balance = parseFloat(document.getElementById('startBalance').value);
+            const profitPct = parseFloat(document.getElementById('profitPercent').value) / 100;
+            const kurs = parseFloat(document.getElementById('kursIdr').value);
+            
+            const tbody = document.querySelector('#resultTable tbody');
+            tbody.innerHTML = '';
+
+            // Definisi Aturan Sinyal per Rentang Hari (Sesuai Chat Anda)
+            // Hari 1-5: 2 sinyal
+            // Hari 6-15: 3 sinyal
+            // Hari 16-20: 2 sinyal
+            // Hari 21-30: 3 sinyal
+            
+            // Definisi Bonus Spesifik (Bisa diedit di sini jika ada perubahan)
+            const bonuses = {
+                5: { amount: 70, desc: "VIP 1 Upgrade" }, 
+                10: { amount: 0, desc: "VIP 1 si A" }, // Masukkan nilai jika ada bonus cash
+                15: { amount: 0, desc: "VIP 1 si B" },
+                20: { amount: 0, desc: "VIP 1 si C" },
+                25: { amount: 0, desc: "VIP 1 si D" },
+                30: { amount: 100, desc: "VIP 1 si E + Bonus" }
+            };
+
+            for (let day = 1; day <= 30; day++) {
+                let signals = 0;
+                let recruit = "1 Orang";
+
+                // Logika Sinyal berdasarkan Hari
+                if (day <= 5) signals = 2;
+                else if (day <= 15) signals = 3;
+                else if (day <= 20) signals = 2;
+                else signals = 3;
+
+                // Hitung Profit Trading Harian (Compounding per sinyal)
+                let startOfDayBalance = balance;
+                for(let s = 0; s < signals; s++) {
+                    balance = balance + (balance * profitPct);
+                }
+                let dailyTradingProfit = balance - startOfDayBalance;
+
+                // Cek Bonus Tambahan
+                let bonusAmount = 0;
+                let bonusDesc = "";
+                
+                if (bonuses[day]) {
+                    bonusAmount = bonuses[day].amount;
+                    bonusDesc = bonuses[day].desc;
+                    balance += bonusAmount; // Tambah bonus ke saldo
+                }
+
+                // Render Baris Tabel
+                const row = `
+                    <tr>
+                        <td>${day}</td>
+                        <td>Ajak ${recruit}</td>
+                        <td>${signals} Sinyal</td>
+                        <td class="text-right">+${formatMoney(dailyTradingProfit)}</td>
+                        <td class="text-right">
+                            ${bonusAmount > 0 ? `<span class="highlight">+${bonusAmount}</span>` : '-'}
+                            ${bonusDesc ? `<span class="bonus-text">${bonusDesc}</span>` : ''}
+                        </td>
+                        <td class="text-right highlight">${formatMoney(balance)} USDT</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            }
+
+            // Update Kartu Ringkasan
+            document.getElementById('totalUSDT').innerText = formatMoney(balance) + " USDT";
+            document.getElementById('totalIDR').innerText = formatMoney(balance * kurs, "IDR");
+        }
+
+        // Jalankan perhitungan saat halaman dimuat
+        window.onload = calculateSimulation;
+    </script>
+</body>
+</html>
