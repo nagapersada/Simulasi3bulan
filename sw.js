@@ -1,9 +1,9 @@
-const CACHE_NAME = 'dvteam-v2';
+const CACHE_NAME = 'dvteam-v3';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/logo.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './logo.png'
 ];
 
 self.addEventListener('install', (e) => {
