@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DVTEAM INFINITE SIMULATOR</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-dark: #b5952f;
+            --bg-body: #050505;
+            --bg-card: #141414;
+            --text-main: #ffffff;
+            --text-dim: #888888;
+            --green: #00e676;
+            --red: #ff5252;
+            --blue: #2979ff;
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            background: #000;
+            border-bottom: 1px solid var(--gold);
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        .brand { font-size: 1.1rem; font-weight: 900; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; }
+        .brand span { color: #fff; font-weight: 300; }
+        .kurs-input { background: #222; border: 1px solid #444; color: #ccc; padding: 5px; width: 80px; text-align: right; border-radius: 4px; font-size: 0.9rem; font-weight: bold;}
+
+        /* MAIN LAYOUT */
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+            flex-direction: column; 
+        }
+
+        /* CONTROL PANEL */
+        .control-panel {
+            padding: 15px;
+            background: var(--bg-card);
+            border-bottom: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-shrink: 0;
+            overflow-y: auto; /* Allow scroll on small screens if needed */
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: #1e1e1e;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Highlight Flash Animation */
+        .flash-update { animation: flashBox 0.8s ease-out; }
+
+        .stat-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
+        .stat-val { font-size: 1.2rem; font-weight: 800; color: #fff; }
+        .stat-sub { font-size: 0.8rem; color: var(--green); margin-top: 4px; font-weight: 500; }
+        .txt-gold { color: var(--gold) !important; }
+        .txt-green { color: var(--green) !important; }
+
+        /* BUTTONS */
+        .btn-main {
+            width: 100%;
+            background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+            color: #000;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: 0.2s;
+            margin-top: 5px;
+        }
+        .btn-main:active { transform: scale(0.97); }
+
+        /* PROJECTION PANEL */
+        #projectionPanel {
+            display: none;
+            background: #101010;
+            border: 1px solid var(--gold);
+            border-radius: 10px;
+            padding: 20px;
+            animation: fadeIn 0.6s;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .proj-header { color: var(--gold); font-weight: bold; text-align: center; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        
+        .proj-inputs {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px; font-size: 0.95rem; color: #ccc; background: #222; padding: 10px; border-radius: 6px;
+        }
+        .inp-days {
+            background: #333; border: 1px solid #555; color: white; 
+            padding: 8px; width: 70px; text-align: center; border-radius: 4px; font-weight: bold; font-size: 1.1rem;
+        }
+
+        /* LOG TABLE */
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-body);
+            position: relative;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { 
+            position: sticky; top: 0; background: #1a1a1a; color: var(--gold); 
+            padding: 12px 10px; text-align: left; font-size: 0.7rem; letter-spacing: 1px;
+            border-bottom: 1px solid #333; z-index: 5;
+        }
+        td { padding: 12px 10px; border-bottom: 1px solid #222; color: #ddd; vertical-align: middle; }
+        .row-new { animation: flashRow 1s; background: rgba(212, 175, 55, 0.08); }
+        .row-proj { background: rgba(0, 230, 118, 0.05); }
+
+        /* UTILS */
+        .badge { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; margin-right: 5px; }
+        .bg-gold { background: var(--gold); color: #000; }
+        .bg-blue { background: var(--blue); color: #fff; }
+        .bg-green { background: var(--green); color: #000; }
+        .bg-red { background: rgba(255, 82, 82, 0.2); color: var(--red); border: 1px solid var(--red); }
+
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes flashRow { 0% { background: var(--gold); color:black; } 100% { background: transparent; } }
+        @keyframes flashBox { 0% { border-color: var(--green); transform: scale(1.02); } 100% { border-color: #333; transform: scale(1); } }
+
+        /* LANDSCAPE MODE */
+        @media (min-width: 768px) and (orientation: landscape) {
+            .main-container { flex-direction: row; }
+            .control-panel { width: 400px; height: 100%; border-right: 1px solid #333; border-bottom: none; }
+            .log-container { flex: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">DVTEAM <span>PRO</span></div>
+        <div>
+            <span style="font-size:0.7rem; color:#666; margin-right:5px;">KURS IDR</span>
+            <input type="number" id="inpKurs" value="15500" class="kurs-input" onchange="updateUI()">
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="control-panel">
+            <div class="stats-row">
+                <div class="stat-box" id="boxBalance">
+                    <div class="stat-label">SALDO AKUN (USDT)</div>
+                    <div class="stat-val txt-gold" id="dispBalance">100.00</div>
+                    <div class="stat-sub" id="dispIdr">Rp 1.550.000</div>
+                </div>
+                
+                <div class="stat-box" id="boxRight">
+                    <div class="stat-label" id="lblRight">PROGRESS</div>
+                    <div class="stat-val" id="valRight"><span id="dispDay">0</span> <span style="font-size:0.7em; color:#666">/ 30</span></div>
+                    <div id="barContainer" style="width:100%; height:4px; background:#333; margin-top:8px; border-radius:2px;">
+                        <div id="progBar" style="width:0%; height:100%; background:var(--green); transition:0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-label">SINYAL / HARI</div>
+                    <div class="stat-val" id="dispSignal">2</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">STATUS TIM</div>
+                    <div class="stat-val" style="font-size:0.9rem;" id="dispTeam">Member: 0</div>
+                </div>
+            </div>
+
+            <div id="phase1Controls">
+                <div style="font-size:0.8rem; color:#bbb; margin-bottom:10px; text-align:center; min-height:20px;" id="missionText">
+                    Mulai perjalanan trading Anda.
+                </div>
+                <button class="btn-main" id="btnNext" onclick="nextDay()">JALANKAN MISI HARI 1</button>
+            </div>
+
+            <div id="projectionPanel">
+                <div class="proj-header">
+                    VIP 2 TERCAPAI - MODE PROYEKSI
+                </div>
+                
+                <div class="proj-inputs">
+                    <span>Tambah Durasi (Hari):</span>
+                    <input type="number" id="inpExtraDays" value="30" class="inp-days">
+                </div>
+
+                <div style="font-size:0.75rem; color:#888; text-align:center; margin-bottom:15px; font-style:italic;">
+                    Klik tombol di bawah untuk menghitung hasil & <br>meng-update saldo akun secara otomatis.
+                </div>
+
+                <button class="btn-main" onclick="applyProjection()">HITUNG & UPDATE SALDO</button>
+                
+                <div style="text-align:center; margin-top:15px;">
+                     <button onclick="location.reload()" style="background:none; border:none; color:#555; cursor:pointer; font-size:0.8rem; text-decoration:underline;">Reset Simulasi dari Awal</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th width="15%">HARI</th>
+                        <th width="45%">AKTIVITAS</th>
+                        <th width="10%" style="text-align:center">SIG</th>
+                        <th width="30%" style="text-align:right">SALDO</th>
+                    </tr>
+                </thead>
+                <tbody id="logTable">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    // --- SETTINGS ---
+    const CONFIG = {
+        startBalance: 100,
+        profitRate: 0.0085, // 0.85%
+        maxDaysPhase1: 30
+    };
+
+    // --- STATE ---
+    let state = {
+        day: 0,
+        balance: 100,
+        signals: 2,
+        team: 0,
+        rank: "Member",
+        phase: 1 // 1 = Roadmap, 2 = Projection
+    };
+
+    // --- EVENTS SCENARIO ---
+    const EVENTS = {
+        5:  { txt: "Naik VIP 1", bonus: 70, tag: "VIP1", setSig: 3 },
+        10: { txt: "Bantu Si A", bonus: 0, tag: "TIM", setSig: 3 },
+        15: { txt: "Bantu Si B", bonus: 0, tag: "TIM", setSig: 3 },
+        16: { txt: "Benefit Habis", bonus: 0, tag: "WARN", setSig: 2, note: "Turun ke 2 Sinyal" },
+        20: { txt: "Bantu Si C", bonus: 0, tag: "TIM", setSig: 3, note: "Sinyal 3 Aktif Lagi" },
+        25: { txt: "Bantu Si D", bonus: 0, tag: "TIM", setSig: 3 },
+        30: { txt: "Naik VIP 2", bonus: 100, tag: "VIP2", setSig: 3, note: "3 Sinyal PERMANEN" }
+    };
+
+    // --- UTILS ---
+    function formatMoney(n, c="USDT") {
+        if(c==="IDR") return "Rp " + n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parseFloat(n).toFixed(2);
+    }
+
+    function updateUI() {
+        const kurs = document.getElementById('inpKurs').value;
+        
+        // 1. Update Saldo (Kiri Atas)
+        document.getElementById('dispBalance').innerText = formatMoney(state.balance);
+        document.getElementById('dispIdr').innerText = formatMoney(state.balance * kurs, "IDR");
+        
+        // 2. Update Box Kanan Atas (Progress OR Net Profit)
+        if(state.phase === 1) {
+            // Mode Progress
+            document.getElementById('dispDay').innerText = state.day;
+            const pct = (state.day / CONFIG.maxDaysPhase1) * 100;
+            document.getElementById('progBar').style.width = pct + "%";
+        } else {
+            // Mode Net Profit (Transformasi)
+            const netProfitUSDT = state.balance - CONFIG.startBalance;
+            const netProfitIDR = netProfitUSDT * kurs;
+            
+            // Ubah DOM Box Kanan Atas
+            const boxRight = document.getElementById('boxRight');
+            boxRight.style.borderColor = "var(--green)";
+            
+            document.getElementById('lblRight').innerText = "TOTAL NET PROFIT (IDR)";
+            document.getElementById('lblRight').style.color = "var(--green)";
+            
+            // Hapus bar, ganti dengan angka besar
+            document.getElementById('valRight').innerHTML = `<span class="txt-green" style="font-size:1.1em">${formatMoney(netProfitIDR, "IDR")}</span>`;
+            
+            // Hide bar container jika masih ada
+            const bar = document.getElementById('barContainer');
+            if(bar) bar.style.display = 'none';
+        }
+
+        document.getElementById('dispSignal').innerText = state.signals;
+        document.getElementById('dispTeam').innerText = `Member: ${state.team} | ${state.rank}`;
+
+        // Control Panel Switch
+        if(state.day >= CONFIG.maxDaysPhase1 && state.phase === 1) {
+            // Transisi ke Phase 2
+            state.phase = 2;
+            document.getElementById('phase1Controls').style.display = 'none';
+            document.getElementById('projectionPanel').style.display = 'block';
+            
+            // Panggil update lagi untuk merender ulang box kanan atas
+            updateUI(); 
+        } else if (state.phase === 1) {
+             // Button Text
+             document.getElementById('btnNext').innerText = `JALANKAN HARI ${state.day + 1}`;
+            
+            // Hint Text
+            let next = EVENTS[state.day + 1];
+            if(next && next.tag === "WARN") {
+                document.getElementById('missionText').innerHTML = "<span style='color:var(--red)'>⚠ PERINGATAN: Benefit Besok Habis!</span>";
+            } else if (state.day === 0) {
+                document.getElementById('missionText').innerText = "Mulai membangun jaringan.";
+            } else {
+                document.getElementById('missionText').innerText = `Trading ${state.signals} Sinyal & Bina Tim`;
+            }
+        }
+    }
+
+    function nextDay() {
+        if(state.day >= CONFIG.maxDaysPhase1) return;
+
+        state.day++;
+        
+        // 1. Process Logic
+        let evt = EVENTS[state.day];
+        let desc = "Ajak 1 Orang";
+        let bonus = 0;
+        let badges = "";
+
+        // Team Logic
+        if(state.day <= 5) state.team++;
+        else if(state.day % 5 === 0) state.team += 5;
+        else state.team++;
+
+        // Rank Logic
+        if(state.day === 5) state.rank = "VIP 1";
+        if(state.day === 30) state.rank = "VIP 2";
+
+        if(evt) {
+            desc = evt.txt;
+            if(evt.bonus) bonus = evt.bonus;
+            if(evt.setSig === 2) state.signals = 2; 
+            
+            let color = "bg-blue";
+            if(evt.tag === "VIP1" || evt.tag === "VIP2") color = "bg-gold";
+            if(evt.tag === "WARN") color = "bg-red";
+            badges = `<span class="badge ${color}">${evt.tag}</span>`;
+        }
+
+        // 2. Calculation (Compound per Signal)
+        let startBal = state.balance;
+        for(let i=0; i<state.signals; i++) {
+            state.balance = state.balance * (1 + CONFIG.profitRate);
+        }
+        
+        // 3. Add Bonus
+        state.balance += bonus;
+        let profitDaily = state.balance - startBal;
+
+        // 4. Log
+        addLog(state.day, badges + " " + desc, state.signals, state.balance, evt?.note || "Profit: +" + formatMoney(profitDaily));
+
+        // 5. Upgrade Signal for Next Day
+        if(evt && evt.setSig === 3) state.signals = 3;
+
+        updateUI();
+    }
+
+    function applyProjection() {
+        // 1. Ambil Input
+        const extraDays = parseInt(document.getElementById('inpExtraDays').value);
+        if(!extraDays || extraDays <= 0) return;
+        
+        const kurs = document.getElementById('inpKurs').value;
+        const currentBal = state.balance;
+        
+        // 2. Hitung Compound (3 Sinyal Permanen)
+        const totalSignals = extraDays * 3;
+        const newBal = currentBal * Math.pow((1 + CONFIG.profitRate), totalSignals);
+        const profitGenerated = newBal - currentBal;
+
+        // 3. UPDATE STATE UTAMA (Kunci Recursive)
+        state.balance = newBal;
+        state.day += extraDays; // Tambah hari
+        
+        // 4. Tambah Log Special
+        const badges = `<span class="badge bg-green">PROYEKSI</span>`;
+        addLog(
+            state.day, 
+            `${badges} Menambah ${extraDays} Hari`, 
+            3, 
+            state.balance, 
+            `Profit Periode Ini: +${formatMoney(profitGenerated)}`,
+            true // Special Class
+        );
+
+        // 5. Trigger Flash Animation di Box Saldo
+        const boxBal = document.getElementById('boxBalance');
+        boxBal.classList.remove('flash-update');
+        void boxBal.offsetWidth; // Trigger reflow
+        boxBal.classList.add('flash-update');
+
+        // 6. Update UI (Otomatis ganti saldo & net profit di atas)
+        updateUI();
+    }
+
+    function addLog(day, activity, sig, bal, note, isSpecial = false) {
+        const tbody = document.getElementById('logTable');
+        const row = document.createElement('tr');
+        row.className = isSpecial ? 'row-new row-proj' : 'row-new';
+        
+        row.innerHTML = `
+            <td style="color:var(--gold); font-weight:bold;">${day}</td>
+            <td>
+                <span style="font-weight:600; font-size:0.9rem;">${activity}</span><br>
+                <small style="color:#888">${note}</small>
+            </td>
+            <td style="text-align:center">
+                <span class="txt-green">${sig}x</span>
+            </td>
+            <td style="text-align:right">
+                <div style="font-weight:bold; color:#fff">${formatMoney(bal)}</div>
+            </td>
+        `;
+        tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    // Init
+    updateUI();
+</script>
+</body>
+</html>
