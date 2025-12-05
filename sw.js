@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dvteam-v14';
+const CACHE_NAME = 'dvteam-v20';
 const ASSETS = [
   './',
   './index.html',
